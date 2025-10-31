@@ -1,0 +1,757 @@
+---
+title: "SPH for Compressible Flows"
+author: "Navaneet"
+format:
+    revealjs:
+        scrollable: true
+        center-title-slide: true
+        slide-number: true
+        width: 1280
+        height: 720
+        controls-layout: bottom-right
+        controls: true
+
+---
+## Contents
+- SPH Equations from Lagrangian
+- Godunov SPH
+- MAGMA2 Scheme
+- Artificial Viscosity Limiting
+- Boundary Treatment
+
+# SPH Equations from Lagrangian
+
+## Generalized Coordinates: $q_i, \dot{q}_i$
+
+$i = 1, 2, \ldots, d$ for $d$ degrees of freedom.
+
+### Examples
+
+- Mass-Spring: $\left(q, \dot{q} \right) = \left( x, \dot{x} \right)$
+- Pendulum: $\left(q, \dot{q} \right) = \left( \theta, \dot{\theta} \right)$
+- Particle: $\left( \begin{array}{cc} q_1 & \dot{q}_1 \\ q_2, & \dot{q}_2 \\ q_3 & \dot{q}_3 \end{array} \right) = (\mathbf{r}, \mathbf{v})$
+
+::: {.callout-caution collapse="true"}
+## System of N particles?
+3 x 2 x N
+:::
+
+## Lagrangian
+
+$$
+L = L\left(\{q_i\}, \{\dot{q}_i\}\right)
+$$
+
+
+- $q_i$ and $\dot{q}_i$ are functions of time, i.e., $q_i = q_i(t)$ and $\dot{q}_i = \dot{q}_i(t)$.
+- $\dot{q}_i = \mathrm{d} q_i/\mathrm{d} t$
+
+<!-- 
+
+::: {.callout-tip}
+Later, we will use
+$$
+L = T - U 
+$$
+where $T$ is the KE and $U$ is the PE of the system.
+::: -->
+
+## Principle of Stationary Action
+
+```{python}
+#| fig-align: center
+#| code-fold: true
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- 1. Set up the Figure ---
+# Use a white background for all elements
+plt.rcParams['text.color'] = 'black'
+plt.rcParams['axes.labelcolor'] = 'black'
+plt.rcParams['xtick.color'] = 'black'
+plt.rcParams['ytick.color'] = 'black'
+plt.rcParams['axes.edgecolor'] = 'black'
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+# --- 2. Generate Data for the Curves ---
+# We'll use a parameterized cubic function to create the S-shape.
+# 't' goes from 0 to 1
+t = np.linspace(0, 1, 100)
+
+# q2 (horizontal axis) goes from 1 to 10
+q2 = 1 + 9 * t
+
+# q1 (vertical axis) is a "smoothstep" function that goes from 10 down to 6
+# This creates the main S-shaped path.
+q1_center = 10 - 4 * (3 * t**2 - 2 * t**3)
+
+# Create a "tube" around the center line
+# The offset is small at the ends and largest in the middle (using a sine wave)
+offset = 0.8 * np.sin(np.pi * t) + 0.1
+q1_upper = q1_center + offset
+q1_lower = q1_center - offset
+
+# --- 3. Plot the Curves ---
+ax.plot(q2, q1_center, color='black', linewidth=2, label="Central Path")
+ax.plot(q2, q1_upper, color='black', linestyle='--', linewidth=1.5, label="Boundary")
+ax.plot(q2, q1_lower, color='black', linestyle='--', linewidth=1.5)
+
+# --- 4. Plot the Endpoints (M1 and M2) ---
+# Coordinates for M1 (start) and M2 (end)
+p1 = (q2[0], q1_center[0])   # (1, 10)
+p2 = (q2[-1], q1_center[-1]) # (10, 6)
+
+# Plot hollow circles
+ax.plot(p1[0], p1[1], 'o', markerfacecolor='white', markeredgecolor='black', markersize=8, markeredgewidth=1.5)
+ax.plot(p2[0], p2[1], 'o', markerfacecolor='white', markeredgecolor='black', markersize=8, markeredgewidth=1.5)
+
+# --- 5. Add Annotations (Labels) ---
+# Use LaTeX formatting for the labels
+ax.text(p1[0] - 0.2, p1[1] + 0.2, r'$q_1^{(1)}, q_2^{(1)}$', fontsize=14, ha='right', va='bottom')
+ax.text(p1[0] - 0.2, p1[1] - 0.2, r'$M_1$', fontsize=14, ha='right', va='top')
+
+ax.text(p2[0] + 0.2, p2[1] + 0.2, r'$q_1^{(2)}, q_2^{(2)}$', fontsize=14, ha='left', va='bottom')
+ax.text(p2[0] + 0.2, p2[1] - 0.2, r'$M_2$', fontsize=14, ha='left', va='top')
+
+# --- 6. Style the Axes ---
+# Define axis limits to create space
+xmin, xmax = -1.6, 12
+ymin, ymax = 4, 12
+ax.set_xlim(xmin, xmax)
+ax.set_ylim(ymin, ymax)
+
+# Turn off all spines (the box around the plot)
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['bottom'].set_visible(False)
+ax.spines['left'].set_visible(False)
+
+# Turn off ticks and tick labels
+ax.set_xticks([])
+ax.set_yticks([])
+
+# Define the origin point for the new axes
+origin_x = -1.5
+origin_y = 4.5
+
+# Draw the new axes with arrows
+# Horizontal axis (q2)
+ax.arrow(origin_x, origin_y, xmax - origin_x - 0.5, 0, 
+         head_width=0.2, head_length=0.3, fc='black', ec='black')
+# Vertical axis (q1)
+ax.arrow(origin_x, origin_y, 0, ymax - origin_y - 0.5, 
+         head_width=0.2, head_length=0.3, fc='black', ec='black')
+
+# Add axis labels
+ax.text(xmax, origin_y, r'$q_2$', fontsize=14, ha='left', va='center')
+ax.text(origin_x, ymax, r'$q_1$', fontsize=14, ha='center', va='bottom')
+
+# --- 7. Show the Plot ---
+plt.show()
+```
+
+## Action
+$$
+\tilde{S} = \int_{t_1}^{t_2} L\left(\{q_i\}, \{\dot{q}_i\}\right) \, \mathrm{d}t
+$$
+
+:::{.callout-note}
+## Statement
+There is a function $L$ of coordinates whose integral has a minimum value during a motion
+:::
+
+## Euler-Lagrange Equations
+Necessary condition for $\tilde{S}$ to be minimum is that the coordinates $q_i$ satisfy the Euler-Lagrange equations:
+$$
+\forall i, 
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \dot{q}_i} \right) - \frac{\partial L}{\partial q_i} = 0
+$$
+<!-- or,
+$$
+\forall i, 
+\frac{\mathrm{d} p_i}{\mathrm{d}t} = \frac{\partial L}{\partial q_i}
+$$
+where $p_i = \frac{\partial L}{\partial \dot{q}_i}$ is the generalized momenta. -->
+
+## EOM using Lagrangian: Simple example of a pendulum
+::: {layout-ncol=2}
+$$
+L = \frac{1}{2} m v^2 - mgh = \frac{1}{2} m l^2 \dot{\theta}^2 + m g l \cos\theta
+$$
+$$
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \dot{\theta}} \right) = m l^2 \ddot{\theta} ; \quad \frac{\partial L}{\partial \theta} = - m g l \sin\theta
+$$
+Therefore,
+$$
+\boxed{\ddot{\theta} + \frac{g}{l} \sin\theta = 0}
+$$
+```{python}
+#| fig-align: center
+#| code-fold: true
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(3, 5))
+
+# Pendulum parameters
+theta = np.pi/8  # angle from vertical
+l = 1.5  # length
+
+# Pivot point
+pivot = np.array([0, 0])
+
+# Bob position
+bob = np.array([l * np.sin(theta), -l * np.cos(theta)])
+
+# Draw the rod
+ax.plot([pivot[0], bob[0]], [pivot[1], bob[1]], 'k-', linewidth=2)
+
+# Draw the pivot
+ax.plot(pivot[0], pivot[1], 'ko', markersize=8)
+
+# Draw the bob (mass)
+ax.plot(bob[0], bob[1], 'o', color='blue', markersize=20)
+
+# Draw vertical reference line (dashed)
+ax.plot([0, 0], [0, -l], 'k--', linewidth=1, alpha=0.5)
+
+# Draw angle arc
+arc_theta = np.linspace(0, theta, 50)
+arc_radius = 0.3
+arc_x = arc_radius * np.sin(arc_theta)
+arc_y = -arc_radius * np.cos(arc_theta)
+ax.plot(arc_x, arc_y, 'r-', linewidth=1.5)
+
+# Add labels
+ax.text(bob[0], bob[1] - 0.25, r'$m$', fontsize=14, ha='center', va='top')
+ax.text(bob[0]/2 - 0.15, bob[1]/2, r'$l$', fontsize=14, ha='center', va='center')
+ax.text(0.15, -0.15, r'$\theta$', fontsize=14, ha='left', va='top', color='red')
+
+# Set equal aspect ratio and limits
+ax.set_aspect('equal')
+ax.set_xlim(-0.5, 1.5)
+ax.set_ylim(-2, 0.5)
+
+# Remove axes
+ax.axis('off')
+# fig.patch.set_visible(False)
+ax.margins(-0.4)
+plt.tight_layout()
+plt.show()
+
+```
+:::
+## SPH EOM from Lagrangian
+Lagrangian for a System of Particles
+$$
+L = \sum_{j} \frac{1}{2} m_j \mathbf{v}_j^2 - e_j
+$$
+where $e_j$ is the specific internal energy of particle $j$.
+
+$$
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \mathbf{v}_i} \right) = m_i \frac{\mathrm{d} \mathbf{v}_i}{\mathrm{d}t}
+$$
+and
+$$
+\frac{\partial L}{\partial \mathbf{r}_i} = \sum_j m_j \frac{\partial e_j}{\partial \mathbf{r}_i} = \sum_j m_j \frac{\partial e_j}{\partial \rho_j} \nabla_i \rho_j .
+$$
+Using $\mathrm{d} e = \left( p / \rho^2 \right) \mathrm{d} \rho$,
+$$
+\frac{\partial L}{\partial \mathbf{r}_i} = \sum_j m_j \frac{p_j}{\rho_j^2} \nabla_i \rho_j.
+$$
+
+::: {.callout-note}
+$$
+\nabla_i \rho_j = \nabla_i \sum_k m_k W_{jk} = \sum_k m_k \nabla_i W_{jk}
+$$
+$W_{jk}$ depends on $\mathbf{r}_i$ only if $i = j$ or $i = k$. Therefore,
+$$
+\nabla_i \rho_j = \sum_k \delta_{ik} m_k \nabla_i W_{jk} +  \sum_k \delta_{ij} m_k  \nabla_i W_{jk} = m_i \nabla_i W_{ji} +  \sum_k \delta_{ij} m_k  \nabla_i W_{jk}
+$$
+:::
+Substituting back,
+$$
+\begin{aligned}
+\frac{\partial L}{\partial \mathbf{r}_i} & =  \sum_j m_j \frac{p_j}{\rho_j^2} \left( m_i \nabla_i W_{ji} + \delta_{ij} \sum_k m_k \nabla_i W_{jk} \right) \\
+& = m_i \sum_{j} m_j \frac{p_j}{\rho_j^2} m_i \nabla_i W_{ji} + m_i \frac{p_i}{\rho_i^2} \sum_k m_k \nabla_i W_{ik} \\
+& = m_i \sum_{j} m_j \frac{p_j}{\rho_j^2} m_i \nabla_i W_{ji} + m_i \frac{p_i}{\rho_i^2} \sum_j m_j \nabla_i W_{ij} \\
+& = m_i \sum_{j} m_j \left( \frac{p_j}{\rho_j^2} + \frac{p_i}{\rho_i^2} \right) \nabla_i W_{ij}
+\end{aligned}
+$$
+
+Recall,
+$$
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \mathbf{v}_i} \right) = m_i \frac{\mathrm{d} \mathbf{v}_i}{\mathrm{d}t}
+$$
+
+Putting together,
+$$
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \mathbf{v}_i} \right) = -\frac{\partial L}{\partial \mathbf{r}_j} \\ \implies m_i \frac{\mathrm{d} \mathbf{v}_j}{\mathrm{d}t} = - m_i \sum_{j} m_j \left( \frac{p_j}{\rho_j^2} + \frac{p_i}{\rho_i^2} \right) \nabla_i W_{ij} 
+$$
+
+$$
+\boxed{\frac{\mathrm{d} \mathbf{v}_j}{\mathrm{d}t} = - \sum_{j} m_j \left( \frac{p_j}{\rho_j^2} + \frac{p_i}{\rho_i^2} \right) \nabla_i W_{ij}}
+$$
+
+## Other Ways: 1
+![ * inaccurate representation](assets/assassination-chain.webp){fig-align="center" width=100%}
+
+## Other Ways: 2
+```{dot}
+digraph G {
+    layout = neato;
+    overlap = false;
+    normalize = true;
+
+    node [shape=box, style=rounded];
+    
+    CV [label="Control Volume"];
+    InOut [label="In - Out - Accumulate"];
+    Integral [label="Integral Form"];
+    Gauss [label="Gauss Divergence"];
+    Differential [label="Differential Form"];
+    Discretise [label="Discretise"];
+    SPH [label="SPH EOM"];
+    
+    CV -> InOut;
+    InOut -> Integral;
+    Integral -> Gauss;
+    Gauss -> Differential;
+    Differential -> Discretise; 
+    Discretise -> SPH;
+}
+```
+## Key Takeaways
+
+- Start with particle lagrangian and you arrive still arrive at same SPH EOM!
+- No ad-hoc reasonings about why choose a particular discretization over the other.
+
+# Godunov SPH
+
+## General Riemann Problem[^toro]
+A conservation law with discontinuous initial data.
+
+- PDE: $\mathbf{U}_t + \mathbf{A} \mathbf{U}_x = 0$
+- IC: $\mathbf{U}(x, 0) = \begin{cases} \mathbf{U}_L & x < 0 \\ \mathbf{U}_R & x > 0 \end{cases}$
+
+- Hyperbolic $\implies$ Diagonalizable $\implies$  $\mathbf{A} = \mathbf{K} \Lambda \mathbf{K}^{-1}$
+- $\mathbf{W} = \mathbf{K}^{-1} \mathbf{U}$ or $\mathbf{U} = \mathbf{K} \mathbf{W}$
+- $\mathbf{U}_t + \mathbf{A} \mathbf{U}_x = 0$ becomes $\mathbf{W}_t + \Lambda \mathbf{W}_x = 0$
+
+## General Riemann Problem Contd[^toro]
+- $\mathbf{W} = (w_1, w_2, \ldots, w_m)^T$ decoupled.
+  - $w_i$ travels at speed $\lambda_i$ and $w_i(x, t) = w_i^0(x - \lambda_i t)$
+
+```{python}
+#| fig-align: center
+#| code-fold: true
+import matplotlib.pyplot as plt
+import numpy as np
+
+num_lines = 5
+angle_min = -6
+angle_max = 60
+label_offset_x = 0.1
+label_offset_y = 0.1
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+# --- Draw x-axis (position) ---
+ax.axhline(0, color='black', linewidth=1.5)
+ax.text(0, -0.15, '0', ha='center', va='top', fontsize=12)
+ax.text(1.1, 0, 'x', ha='left', va='center', fontsize=14, fontweight='bold')
+
+# --- Draw t-axis (time) ---
+ax.axvline(0, color='black', linewidth=1.5)
+ax.text(-0.05, 1.1, 't', ha='right', va='center', fontsize=14, fontweight='bold')
+
+# --- Draw Characteristic Lines (Fan) ---
+angles_rad = np.linspace(np.radians(angle_min), np.radians(angle_max), num_lines)
+slopes = np.tan(np.pi / 2 - angles_rad) # Slopes in t-x plane (dt/dx), for plotting x-t we use dx/dt
+
+# Adjust slopes for an x-t plot where x is horizontal and t is vertical
+# If the lines represent dx/dt, then slope on x-t plot is 1/speed
+# Let's assume the angles represent the 'speed' or dx/dt relative to the t-axis.
+# So, a 45-degree line from t-axis means slope of 1 (dx/dt = 1)
+# A more intuitive approach might be to just define slopes and ensure they fan out.
+
+# Let's define slopes (dx/dt) directly for plotting
+speeds = np.linspace(-0.8, 0.8, num_lines) # Arbitrary speeds for the fan
+
+for i, speed in enumerate(speeds):
+    # Line from (0,0) to (x_end, t_end)
+    # We want lines of certain length, let's say up to t=1
+    t_end = 1
+    x_end = speed * t_end
+    ax.plot([0, x_end], [0, t_end], color='black', linewidth=1.5)
+
+    # Add labels lambda_i
+    if i == 0:
+        label = r'$\lambda_1$'
+    elif i == 1:
+        label = r'$\lambda_2$'
+    elif i == num_lines - 2:
+        label = r'$\lambda_{m-1}$'
+    elif i == num_lines - 1:
+        label = r'$\lambda_m$'
+    else:
+        label = r'$\lambda_i$'
+
+    # Position the label slightly along the line
+    label_x = x_end * 0.8 + label_offset_x * np.sign(x_end if x_end != 0 else 1)
+    label_y = t_end * 0.8 + label_offset_y
+    ax.text(label_x, label_y, label, ha='center', va='bottom', fontsize=12)
+
+# --- Add U_L and U_R labels ---
+ax.text(-0.5, -0.05, r'Left data U$_L$', ha='center', va='top', fontsize=14)
+ax.text(0.5, -0.05, r'Right data U$_R$', ha='center', va='top', fontsize=14)
+
+ax.set_xlim(-1.2, 1.2)
+ax.set_ylim(-0.2, 1.2)
+ax.set_aspect('equal', adjustable='box')
+ax.axis('off') # Hide axes ticks and spines
+
+ax.set_ylim(0, 1.2)
+plt.tight_layout()
+plt.show()
+```
+## General Riemann Problem Contd[^toro]
+- $\mathbf{U} = \mathbf{K} \mathbf{W}$ can also be written as
+  $$
+  \mathbf{U} = \sum_{i=1}^{m} w_i(x,t) \mathbf{K}^{(i)} = \sum_{i=1}^{m} w_i^0(x - \lambda_i t)  \mathbf{K}^{(i)}
+  $$
+  where $\mathbf{K}^{(i)}$ is the $i$-th column of $\mathbf{K}$.
+- The right and left states can also be expressed as
+  $$
+\mathbf{U}_{\text{L}} = \sum_{i=1}^{m} \alpha_i \mathbf{K}^{(i)} ,
+\quad
+\mathbf{U}_{\text{R}} = \sum_{i=1}^{m} \beta_i \mathbf{K}^{(i)}
+$$
+Comparing the two expressions above,
+$$
+w_i^0(x) = \begin{cases}
+\alpha_i & x < 0 \\
+\beta_i & x > 0
+\end{cases} \\
+\implies w_i(x) = w_i^0(x - \lambda_i t) = \begin{cases}
+\alpha_i & x < \lambda_i t \\
+\beta_i & x > \lambda_i t
+\end{cases}
+$$
+Putting it all together,
+$$
+\boxed{\mathbf{U}(x, t) = \sum_{i=I+1}^{m} \alpha_i \mathbf{K}^{(i)} + \sum_{i=1}^{I} \beta_i \mathbf{K}^{(i)}}
+$$
+where the integer $I$ is the maximum value of $i$ such that $\lambda_i < x/t$.
+
+
+## Riemann Problem for Euler Equations
+Three waves separating four states.
+```{python}
+#| fig-align: center
+#| code-fold: true
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig, ax = plt.subplots(figsize=(8, 4))
+
+# Draw x-axis
+ax.axhline(0, color='black', linewidth=1.5)
+ax.text(1.1, -0.05, 'x', ha='left', va='center', fontsize=14, fontweight='bold')
+
+# Draw t-axis
+ax.axvline(0, color='black', linewidth=1.5)
+ax.text(-0.05, 1.1, 't', ha='right', va='bottom', fontsize=14, fontweight='bold')
+
+# Define wave speeds
+shock_left_speed = -0.6
+contact_speed = 0.2
+shock_right_speed = 0.7
+
+# Rarefaction fan speeds
+rarefaction_speeds = np.linspace(-0.8, -0.3, 5)
+
+t_max = 1.0
+
+# Draw left wave (rarefaction fan)
+for speed in rarefaction_speeds:
+    x_end = speed * t_max
+    ax.plot([0, x_end], [0, t_max], 'b-', linewidth=1.5, alpha=0.7)
+
+# Draw contact discontinuity
+x_contact = contact_speed * t_max
+ax.plot([0, x_contact], [0, t_max], 'g--', linewidth=2.5, label='Contact')
+
+# Draw right wave (shock)
+x_shock_right = shock_right_speed * t_max
+ax.plot([0, x_shock_right], [0, t_max], 'r-', linewidth=2.5, label='Shock')
+
+# Add region labels
+ax.text(-0.8, 0.7, r'$U_L$', fontsize=16, ha='center', fontweight='bold', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+ax.text(-0.05, 0.7, r'$U_L^*$', fontsize=16, ha='center', fontweight='bold', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+ax.text(0.3, 0.7, r'$U_R^*$', fontsize=16, ha='center', fontweight='bold', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+ax.text(0.75, 0.7, r'$U_R$', fontsize=16, ha='center', fontweight='bold', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+# Add wave labels
+ax.text(-0.6, 0.9, 'Rarefaction', fontsize=12, ha='center', color='blue', fontweight='bold')
+ax.text(0.2, 0.85, 'Contact', fontsize=12, ha='center', color='green', fontweight='bold')
+ax.text(0.7, 0.9, 'Shock', fontsize=12, ha='center', color='red', fontweight='bold')
+
+ax.set_xlim(-1.0, 1.0)
+ax.set_ylim(-0.1, 1.2)
+ax.set_aspect('equal', adjustable='box')
+ax.axis('off')
+
+plt.tight_layout()
+plt.show()
+```
+$$
+\lambda_1 = u - c , \quad \lambda_2 = u , \quad \lambda_3 = u + c
+$$
+<!-- - **Left Wave**: Rarefaction or shock depending on pressure ratio
+- **Middle Wave**: Contact discontinuity (carries density and entropy jumps)
+- **Right Wave**: Rarefaction or shock depending on pressure ratio
+- **Four States**: $(\rho_L, u_L, p_L)$, $(\rho_*, u_*, p_L^*)$, $(\rho_*, u_*, p_R^*)$, $(\rho_R, u_R, p_R)$
+
+- The velocity and pressure are continuous across the contact discontinuity: $u_* = u_1^* = u_2^*$ and $p_* = p_1^* = p_2^*$.
+- Entropy is constant across rarefaction but discontinuous across shocks. -->
+
+
+## Godunov's Scheme in Finite Volume
+
+- Properties piecewise continuous over each cell.
+- Discontinuities at interfaces.
+- Riemann problems solved at each cell interface to get intercell fluxes.
+```{python}
+#| fig-align: center
+#| code-fold: true
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig, ax = plt.subplots(figsize=(8, 4))
+
+# Cell boundaries
+x_left = 0
+x_mid = 1
+x_right = 2
+
+# Cell values
+u_left = 2.0
+u_right = 0.8
+
+# Draw cells as rectangles
+ax.add_patch(plt.Rectangle((x_left, 0), x_mid - x_left, u_left, 
+                           fill=True, facecolor='lightblue', edgecolor='black', linewidth=2))
+ax.add_patch(plt.Rectangle((x_mid, 0), x_right - x_mid, u_right, 
+                           fill=True, facecolor='lightcoral', edgecolor='black', linewidth=2))
+
+# Draw vertical discontinuity line at interface
+ax.plot([x_mid, x_mid], [0, max(u_left, u_right) + 0.3], 'k--', linewidth=2, label='Discontinuity')
+
+# Add cell center labels
+ax.text((x_left + x_mid) / 2, u_left / 2, r'$U_L$', fontsize=16, ha='center', va='center', fontweight='bold')
+ax.text((x_mid + x_right) / 2, u_right / 2, r'$U_R$', fontsize=16, ha='center', va='center', fontweight='bold')
+
+# Axis labels
+ax.set_xlim(-0.2, 2.5)
+ax.set_ylim(-0.3, 2.5)
+ax.axhline(0, color='black', linewidth=1)
+ax.set_xticks([0.5 * (x_left + x_mid), 0.5 * (x_mid + x_right)])
+ax.set_xticklabels([r'$x_{i}$', r'$x_{i+1}$'])
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_visible(False)
+ax.set_yticks([])
+plt.tight_layout()
+plt.show()
+
+```
+## Godunov SPH [^cha2003]
+
+- Interface midway between particles $i$ and $j$.
+- Solve Riemann problem to find $p^*$ and $u^*$ at the interface. 
+- Substitute in SPH discretized equations:
+- No artificial viscosity needed!
+
+- **Original GSPH by Inutsuka(2002)^[Inutsuka, Shu-ichiro. 2002. “Reformulation of Smoothed Particle Hydrodynamics with Riemann Solver.” Journal of Computational Physics 179 (1): 238–67. https://doi.org/10.1006/jcph.2002.7053.
+] is slightly different.**
+
+## Godunov SPH Equations[^cha2003]
+$$\rho = \sum_{j} m_j W_{ij}$$
+$$\frac{d \mathbf{v}_i}{d t} = - \sum_{j} m_j \left( \frac{p^*}{\rho_i^2} + \frac{p^*}{\rho_j^2} \right) \nabla_i W_{ij}$$
+$$\frac{d e_i}{d t} = \sum_{j} m_j \frac{p^*}{\rho_i^2} (\mathbf{v}^* - \mathbf{v}_i) \cdot \nabla_i W_{ij}$$
+
+## Key Takeaways
+
+- Interaction between particles modeled using Riemann problems.
+- Obtain $p^*$ and $u^*$ from Riemann solver. 
+- Substitute in SPH EOM.
+- No artificial viscosity needed to capture shocks.
+
+
+[^toro]: Toro, E. F. 2009. Riemann Solvers and Numerical Methods for Fluid Dynamics: A Practical Introduction. 3rd ed. Springer.
+
+[^cha2003]: Cha, S.- H., and A. P. Whitworth. 2003. “Implementations and Tests of Godunov-Type Particle Hydrodynamics.” Monthly Notices of the Royal Astronomical Society 340 (1): 73–90. https://doi.org/10.1046/j.1365-8711.2003.06266.x.
+
+
+
+
+# MAGMA2 Scheme
+
+## Derivatives without $\nabla W_{ij}$[^garcia2012] [^rosswog2015] 
+
+$$
+\tilde{\mathbf{I}}_f(\mathbf{r}) = \int \left[ f(\mathbf{r'}) - f(\mathbf{r})\right](\mathbf{r}' - \mathbf{r}) W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
+$$
+Substitute $f(\mathbf{r'}) = f(\mathbf{r}) + \nabla f(\mathbf{r}) \cdot (\mathbf{r'} - \mathbf{r}) + \dots$ in above
+$$
+\tilde{\mathbf{I}}^i_f(\mathbf{r}) = \int \left[ (\nabla f)^k|_r (\mathbf{r'} - \mathbf{r})^k \right] (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V' + O(f'')
+$$
+Rearrange,
+$$
+(\nabla f)^k(\mathbf{r}) = \tilde{\mathbf{C}}^{k i} \tilde{\mathbf{I}}_f^i(\mathbf{r})
+$$
+
+## Derivatives without $\nabla W_{ij}$[^garcia2012] [^rosswog2015] Contd
+$$
+(\nabla f)^k(\mathbf{r}) = \tilde{\mathbf{C}}^{k i} \tilde{\mathbf{I}}_f^i(\mathbf{r})
+$$
+where
+$$
+\frac{1}{\tilde{\mathbf{C}}^{k i}} = \int (\mathbf{r'} - \mathbf{r})^k (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
+$$
+or in a discrete form,
+$$
+\frac{1}{\mathbf{C}^{k i}} = \sum_j \frac{m_j}{\rho_j} (\mathbf{r}_j - \mathbf{r})^k (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
+$$
+
+## Derivatives without $\nabla W_{ij}$[^garcia2012] [^rosswog2015] Contd
+$$
+(\nabla f)^k(\mathbf{r}) = \sum_j V_j f_j \sum_{d=1}^D \mathbf{C}^{k d} (\mathbf{r}_b - \mathbf{r})^d W(\left|\mathbf{r} - \mathbf{r}_b\right|, h)
+$$
+
+
+We have seen, 
+$$
+(\nabla f)^k (\mathbf{r}) = \sum_j V_j f_j \left(\nabla W \left(\left|\mathbf{r} - \mathbf{r}_j\right|, h\right) \right)^k
+$$
+By comparisson,
+$$
+\left(\nabla W \left(\left|\mathbf{r} - \mathbf{r}_j\right|, h\right) \right)^k \leftrightarrow \mathbf{C}^{k i} (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
+$$
+
+
+## MAGMA2[^rosswog2020a] Equations: MI1
+$$
+\rho_i = \sum_j m_j W_{ij}(h_i)
+$$
+$$
+\frac{d \mathbf{v}_i}{d t} = - \sum_j m_j \left( \frac{p_i}{\rho_i^2} \mathbf{G}_i + \frac{p_j}{\rho_j^2} \mathbf{G}_j\right) 
+$$
+$$
+\frac{d e_i}{d t} = \frac{p_i}{\rho_i^2} \sum_j m_j (\mathbf{v}_i - \mathbf{v}_j) \cdot \mathbf{G}_i
+$$
+where
+$$
+\mathbf{G}_i^k = \sum_{d=1}^3 \mathbf{C}_i^{k d}(\mathbf{r}_i, h_i) (\mathbf{r}_j - \mathbf{r}_i)^d W_{ij}(h_i)
+$$
+and 
+$$
+\mathbf{G}_j^k = \sum_{d=1}^3 \mathbf{C}_j^{k d}(\mathbf{r}_j, h_j) (\mathbf{r}_j - \mathbf{r}_i)^d W_{ij}(h_j)
+$$
+
+## Remember Artificial Viscosity?
+$$
+\Pi_{ij} = \begin{cases}
+\dfrac{-\alpha c_{s,ij} \mu_{ij} + \beta \mu_{ij}^2}{\rho_{ij}} & \mathbf{v}_{ij} \cdot \mathbf{r}_{ij} < 0, \\
+0 & \text{otherwise}.
+\end{cases}
+$$
+where
+$$
+\mu_{ij} = \frac{h_{ij} \mathbf{v}_{ij} \cdot \mathbf{r}_{ij}}{\left|\mathbf{r}_{ij}\right|^2 + \epsilon h_{ij}^2} 
+$$
+
+::: {.callout-note}
+## Quote
+Standard SPH is hopeless: it oversmoothes the strong shock and is completely incapable of dealing with the weak shock. -- Cullen and Dehnen[^cullen2010]
+:::
+
+## Balsara Switch ^[Balsara, Dinshaw S. 1995. “Von Neumann Stability Analysis of Smoothed Particle Hydrodynamics—Suggestions for Optimal Algorithms.” Journal of Computational Physics 121 (2): 357–72. https://doi.org/10.1016/S0021-9991(95)90221-X.]
+To reduce unwanted shear viscosity, we can multiply $\Pi_{ij}$ by a factor $f_{ij} = f_i + f_j$ where
+$$
+f_i = \frac{\left|\nabla \cdot \mathbf{v}_i\right|}{\left|\nabla \cdot \mathbf{v}_i\right| + \left|\nabla \times \mathbf{v}_i\right| }
+$$
+
+Remember?
+$$
+\nabla \cdot \mathbf{v} = -\frac{1}{\rho} \frac{\mathrm{d}\rho}{\mathrm{d}t}
+$$
+
+## Morris & Monaghan Switch ^[Morris, J. P., and J. J. Monaghan. 1997. “A Switch to Reduce SPH Viscosity.” Journal of Computational Physics 136 (1): 41–50. https://doi.org/10.1006/jcph.1997.5690.]
+$$
+\frac{\mathrm{d} \alpha_i}{\mathrm{d} t} = - \frac{\alpha_i - \alpha_{min}}{\tau_i} + S_i
+$$
+where $\tau_i = 0.2 h_i / (0.1 c_{s,i})$ and
+$$
+S_i = \max(-\nabla \cdot \mathbf{v}_i, 0)
+$$
+
+## Cullen and Dehnen Switch [^cullen2010]
+Use $\mathrm{d} (\mathbf{\nabla \cdot v}) / \mathrm{d} t$ instead of $\nabla \cdot \mathbf{v}$.
+![Cullen and Dehnen Switch](assets/sod_cullen.png){width=100%}
+New method = Cullen and Dehnen Switch
+
+## Others
+- Read and Hayfield (2012) ^[Read, J. I., and T. Hayfield. 2012. “SPHS: Smoothed Particle Hydrodynamics with a Higher Order Dissipation Switch: SPH with a Higher Order Dissipation Switch.” Monthly Notices of the Royal Astronomical Society 422 (4): 3037–55. https://doi.org/10.1111/j.1365-2966.2012.20819.x.]
+- Frontiere et al. (2017) ^[Frontiere, Nicholas, Cody D. Raskin, and J. Michael Owen. 2017. “CRKSPH - A Conservative Reproducing Kernel Smoothed Particle Hydrodynamics Scheme.” Journal of Computational Physics 332 (March): 160–209. https://doi.org/10.1016/j.jcp.2016.12.004.]
+- Rosswog et al. (2020) ^[Rosswog, S. 2020. “A Simple, Entropy-Based Dissipation Trigger for SPH.” The Astrophysical Journal 898 (1): 60. https://doi.org/10.3847/1538-4357/ab9a2e.]
+
+[^garcia2012]: García-Senz, D., R. M. Cabezón, and J. A. Escartín. 2012. “Improving Smoothed Particle Hydrodynamics with an Integral Approach to Calculating Gradients.” Astronomy & Astrophysics 538 (February): A9. https://doi.org/10.1051/0004-6361/201117939.
+
+[^rosswog2015]: Rosswog, S. 2015. “Boosting the Accuracy of SPH Techniques: Newtonian and Special-Relativistic Tests.” Monthly Notices of the Royal Astronomical Society 448 (4): 3628–64. https://doi.org/10.1093/mnras/stv225.
+
+[^rosswog2020a]: Rosswog, S. 2020. “The Lagrangian Hydrodynamics Code MAGMA2.” Monthly Notices of the Royal Astronomical Society 498 (3): 4230–55. https://doi.org/10.1093/mnras/staa2591.
+
+[^cullen2010]: Cullen, Lee, and Walter Dehnen. 2010. “Inviscid Smoothed Particle Hydrodynamics: Inviscid Smoothed Particle Hydrodynamics.” Monthly Notices of the Royal Astronomical Society 408 (2): 669–83. https://doi.org/10.1111/j.1365-2966.2010.17158.x.
+
+## Key Takeaways
+- Shock limiters
+  - Limits artificial viscosity to regions near shocks.
+  - Less smearing, crisper results.
+
+- MAGMA2
+  - New ways to compute derivatives without $\nabla W_{ij}$.
+  - Matrix $\mathbf{C}$ adds advantages of kernel corrections.
+  - Efficient
+  - Limited artificial viscosity.
+  - Good results.
+
+# Boundary Treatment
+## Particle Configurations
+![](assets/bound.svg){fig-align="center" width=100%}
+
+## Assign Properties[^adami]
+
+![](assets/adami.svg){fig-align="center" width=80%}
+
+## Keep Volume Constant
+
+::: {layout-ncol=3}
+![Initial Configuration](assets/initial.svg)
+
+![Result of density interpolation after fluid density change](assets/inter.svg)
+
+![Alter ghost particles' mass to preserve their volume](assets/final.svg)
+:::
+
+## Summary
+- Extrapolate
+- Flip interface normal component of velocity
+- Ensure volume constancy for ghost particles
+
+
+[^adami]: Adami, S., X.Y. Hu, and N.A. Adams. 2012. “A Generalized Wall Boundary Condition for Smoothed Particle Hydrodynamics.” Journal of Computational Physics 231 (21): 7057–75. https://doi.org/10.1016/j.jcp.2012.05.005.
