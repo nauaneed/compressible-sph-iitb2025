@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="full_files/libs/clipboard/clipboard.min.js"></script>
+<script src="full_files/libs/quarto-html/tabby.min.js"></script>
+<script src="full_files/libs/quarto-html/popper.min.js"></script>
+<script src="full_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="full_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="full_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="full_files/libs/quarto-html/quarto-syntax-highlighting-7b89279ff1a6dce999919e0e67d4d9ec.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.8.25">
+
+  <meta name="author" content="Navaneet">
+  <title>SPH for Compressible Flows</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="full_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="full_files/libs/revealjs/dist/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+  </style>
+  <link rel="stylesheet" href="full_files/libs/revealjs/dist/theme/quarto-534cd8e3a96973385dffff3f4709048d.css">
+  <link href="full_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="full_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="full_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="full_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" class="quarto-title-block center">
+  <h1 class="title">SPH for Compressible Flows</h1>
+
+<div class="quarto-title-authors">
+<div class="quarto-title-author">
+<div class="quarto-title-author-name">
+Navaneet 
+</div>
+</div>
+</div>
+
+</section>
+<section id="contents" class="slide level2">
+<h2>Contents</h2>
+<ul>
+<li>SPH Equations from Lagrangian</li>
+<li>Godunov SPH</li>
+<li>MAGMA2 Scheme</li>
+<li>Artificial Viscosity Limiting</li>
+<li>Boundary Treatment</li>
+</ul>
+</section>
+<section>
+<section id="sph-equations-from-lagrangian" class="title-slide slide level1 center">
+<h1>SPH Equations from Lagrangian</h1>
+
+</section>
+<section id="generalized-coordinates-q_i-dotq_i" class="slide level2">
+<h2>Generalized Coordinates: <span class="math inline">\(q_i, \dot{q}_i\)</span></h2>
+<p><span class="math inline">\(i = 1, 2, \ldots, d\)</span> for <span class="math inline">\(d\)</span> degrees of freedom.</p>
+<h3 id="examples">Examples</h3>
+<ul>
+<li>Mass-Spring: <span class="math inline">\(\left(q, \dot{q} \right) = \left( x, \dot{x} \right)\)</span></li>
+<li>Pendulum: <span class="math inline">\(\left(q, \dot{q} \right) = \left( \theta, \dot{\theta} \right)\)</span></li>
+<li>Particle: <span class="math inline">\(\left( \begin{array}{cc} q_1 &amp; \dot{q}_1 \\ q_2, &amp; \dot{q}_2 \\ q_3 &amp; \dot{q}_3 \end{array} \right) = (\mathbf{r}, \mathbf{v})\)</span></li>
+</ul>
+<div class="callout callout-caution callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>System of N particles?</strong></p>
+</div>
+<div class="callout-content">
+<p>3 x 2 x N</p>
+</div>
+</div>
+</div>
+</section>
+<section id="lagrangian" class="slide level2">
+<h2>Lagrangian</h2>
+<p><span class="math display">\[
+L = L\left(\{q_i\}, \{\dot{q}_i\}\right)
+\]</span></p>
+<ul>
+<li><span class="math inline">\(q_i\)</span> and <span class="math inline">\(\dot{q}_i\)</span> are functions of time, i.e., <span class="math inline">\(q_i = q_i(t)\)</span> and <span class="math inline">\(\dot{q}_i = \dot{q}_i(t)\)</span>.</li>
+<li><span class="math inline">\(\dot{q}_i = \mathrm{d} q_i/\mathrm{d} t\)</span></li>
+</ul>
+<!-- 
+
+::: {.callout-tip}
+Later, we will use
+$$
+L = T - U 
+$$
+where $T$ is the KE and $U$ is the PE of the system.
+::: -->
+</section>
+<section id="principle-of-stationary-action" class="slide level2">
+<h2>Principle of Stationary Action</h2>
+<div id="b1b992a5" class="cell" data-execution_count="1">
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="full_files/figure-revealjs/cell-2-output-1.png" class="quarto-figure quarto-figure-center" width="640" height="481"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="action" class="slide level2">
+<h2>Action</h2>
+<p><span class="math display">\[
+\tilde{S} = \int_{t_1}^{t_2} L\left(\{q_i\}, \{\dot{q}_i\}\right) \, \mathrm{d}t
+\]</span></p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Statement</strong></p>
+</div>
+<div class="callout-content">
+<p>There is a function <span class="math inline">\(L\)</span> of coordinates whose integral has a minimum value during a motion</p>
+</div>
+</div>
+</div>
+</section>
+<section id="euler-lagrange-equations" class="slide level2">
+<h2>Euler-Lagrange Equations</h2>
+<p>Necessary condition for <span class="math inline">\(\tilde{S}\)</span> to be minimum is that the coordinates <span class="math inline">\(q_i\)</span> satisfy the Euler-Lagrange equations: <span class="math display">\[
+\forall i,
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \dot{q}_i} \right) - \frac{\partial L}{\partial q_i} = 0
+\]</span> <!-- or,
+$$
+\forall i, 
+\frac{\mathrm{d} p_i}{\mathrm{d}t} = \frac{\partial L}{\partial q_i}
+$$
+where $p_i = \frac{\partial L}{\partial \dot{q}_i}$ is the generalized momenta. --></p>
+</section>
+<section id="eom-using-lagrangian-simple-example-of-a-pendulum" class="slide level2">
+<h2>EOM using Lagrangian: Simple example of a pendulum</h2>
+<div class="quarto-layout-panel" data-layout-ncol="2">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 50.0%;justify-content: flex-start;">
+<p><span class="math display">\[
+L = \frac{1}{2} m v^2 - mgh = \frac{1}{2} m l^2 \dot{\theta}^2 + m g l \cos\theta
+\]</span> <span class="math display">\[
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \dot{\theta}} \right) = m l^2 \ddot{\theta} ; \quad \frac{\partial L}{\partial \theta} = - m g l \sin\theta
+\]</span> Therefore, <span class="math display">\[
+\boxed{\ddot{\theta} + \frac{g}{l} \sin\theta = 0}
+\]</span></p>
+</div>
+<div id="2289d0ab" class="cell quarto-layout-cell" data-execution_count="2" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="full_files/figure-revealjs/cell-3-output-1.png" class="quarto-figure quarto-figure-center" width="278" height="343"></p>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="sph-eom-from-lagrangian" class="slide level2">
+<h2>SPH EOM from Lagrangian</h2>
+<p>Lagrangian for a System of Particles <span class="math display">\[
+L = \sum_{j} \frac{1}{2} m_j \mathbf{v}_j^2 - e_j
+\]</span> where <span class="math inline">\(e_j\)</span> is the specific internal energy of particle <span class="math inline">\(j\)</span>.</p>
+<p><span class="math display">\[
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \mathbf{v}_i} \right) = m_i \frac{\mathrm{d} \mathbf{v}_i}{\mathrm{d}t}
+\]</span> and <span class="math display">\[
+\frac{\partial L}{\partial \mathbf{r}_i} = \sum_j m_j \frac{\partial e_j}{\partial \mathbf{r}_i} = \sum_j m_j \frac{\partial e_j}{\partial \rho_j} \nabla_i \rho_j .
+\]</span> Using <span class="math inline">\(\mathrm{d} e = \left( p / \rho^2 \right) \mathrm{d} \rho\)</span>, <span class="math display">\[
+\frac{\partial L}{\partial \mathbf{r}_i} = \sum_j m_j \frac{p_j}{\rho_j^2} \nabla_i \rho_j.
+\]</span></p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Note</strong></p>
+</div>
+<div class="callout-content">
+<p><span class="math display">\[
+\nabla_i \rho_j = \nabla_i \sum_k m_k W_{jk} = \sum_k m_k \nabla_i W_{jk}
+\]</span> <span class="math inline">\(W_{jk}\)</span> depends on <span class="math inline">\(\mathbf{r}_i\)</span> only if <span class="math inline">\(i = j\)</span> or <span class="math inline">\(i = k\)</span>. Therefore, <span class="math display">\[
+\nabla_i \rho_j = \sum_k \delta_{ik} m_k \nabla_i W_{jk} +  \sum_k \delta_{ij} m_k  \nabla_i W_{jk} = m_i \nabla_i W_{ji} +  \sum_k \delta_{ij} m_k  \nabla_i W_{jk}
+\]</span></p>
+</div>
+</div>
+</div>
+<p>Substituting back, <span class="math display">\[
+\begin{aligned}
+\frac{\partial L}{\partial \mathbf{r}_i} &amp; =  \sum_j m_j \frac{p_j}{\rho_j^2} \left( m_i \nabla_i W_{ji} + \delta_{ij} \sum_k m_k \nabla_i W_{jk} \right) \\
+&amp; = m_i \sum_{j} m_j \frac{p_j}{\rho_j^2} m_i \nabla_i W_{ji} + m_i \frac{p_i}{\rho_i^2} \sum_k m_k \nabla_i W_{ik} \\
+&amp; = m_i \sum_{j} m_j \frac{p_j}{\rho_j^2} m_i \nabla_i W_{ji} + m_i \frac{p_i}{\rho_i^2} \sum_j m_j \nabla_i W_{ij} \\
+&amp; = m_i \sum_{j} m_j \left( \frac{p_j}{\rho_j^2} + \frac{p_i}{\rho_i^2} \right) \nabla_i W_{ij}
+\end{aligned}
+\]</span></p>
+<p>Recall, <span class="math display">\[
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \mathbf{v}_i} \right) = m_i \frac{\mathrm{d} \mathbf{v}_i}{\mathrm{d}t}
+\]</span></p>
+<p>Putting together, <span class="math display">\[
+\frac{\mathrm{d}}{\mathrm{d}t} \left( \frac{\partial L}{\partial \mathbf{v}_i} \right) = -\frac{\partial L}{\partial \mathbf{r}_j} \\ \implies m_i \frac{\mathrm{d} \mathbf{v}_j}{\mathrm{d}t} = - m_i \sum_{j} m_j \left( \frac{p_j}{\rho_j^2} + \frac{p_i}{\rho_i^2} \right) \nabla_i W_{ij}
+\]</span></p>
+<p><span class="math display">\[
+\boxed{\frac{\mathrm{d} \mathbf{v}_j}{\mathrm{d}t} = - \sum_{j} m_j \left( \frac{p_j}{\rho_j^2} + \frac{p_i}{\rho_i^2} \right) \nabla_i W_{ij}}
+\]</span></p>
+</section>
+<section id="other-ways-1" class="slide level2">
+<h2>Other Ways: 1</h2>
+
+<img data-src="assets/assassination-chain.webp" style="width:100.0%" class="r-stretch quarto-figure-center"><p class="caption">* inaccurate representation</p></section>
+<section id="other-ways-2" class="slide level2">
+<h2>Other Ways: 2</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class=""><p></p>
+<div>
+<svg width="960" height="480" viewbox="0.00 0.00 686.37 179.14" xmlns="http://www.w3.org/2000/svg" xlink="http://www.w3.org/1999/xlink" style="; max-width: none; max-height: none; display: block; margin: auto auto auto auto">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 175.14)">
+<title>G</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-175.14 682.37,-175.14 682.37,4 -4,4"></polygon>
+<!-- CV -->
+<g id="node1" class="node">
+<title>CV</title>
+<path fill="none" stroke="black" d="M95.57,-114.82C95.57,-114.82 11.81,-114.82 11.81,-114.82 5.81,-114.82 -0.19,-108.82 -0.19,-102.82 -0.19,-102.82 -0.19,-90.82 -0.19,-90.82 -0.19,-84.82 5.81,-78.82 11.81,-78.82 11.81,-78.82 95.57,-78.82 95.57,-78.82 101.57,-78.82 107.57,-84.82 107.57,-90.82 107.57,-90.82 107.57,-102.82 107.57,-102.82 107.57,-108.82 101.57,-114.82 95.57,-114.82"></path>
+<text text-anchor="middle" x="53.69" y="-92.62" font-family="Times,serif" font-size="14.00">Control Volume</text>
+</g>
+<!-- InOut -->
+<g id="node2" class="node">
+<title>InOut</title>
+<path fill="none" stroke="black" d="M245.45,-66.38C245.45,-66.38 130.21,-66.38 130.21,-66.38 124.21,-66.38 118.21,-60.38 118.21,-54.38 118.21,-54.38 118.21,-42.38 118.21,-42.38 118.21,-36.38 124.21,-30.38 130.21,-30.38 130.21,-30.38 245.45,-30.38 245.45,-30.38 251.45,-30.38 257.45,-36.38 257.45,-42.38 257.45,-42.38 257.45,-54.38 257.45,-54.38 257.45,-60.38 251.45,-66.38 245.45,-66.38"></path>
+<text text-anchor="middle" x="187.83" y="-44.18" font-family="Times,serif" font-size="14.00">In - Out - Accumulate</text>
+</g>
+<!-- CV&#45;&gt;InOut -->
+<g id="edge1" class="edge">
+<title>CV-&gt;InOut</title>
+<path fill="none" stroke="black" d="M103.64,-78.78C111.67,-75.88 120.05,-72.85 128.28,-69.88"></path>
+<polygon fill="black" stroke="black" points="129.63,-73.12 137.84,-66.43 127.25,-66.54 129.63,-73.12"></polygon>
+</g>
+<!-- Integral -->
+<g id="node3" class="node">
+<title>Integral</title>
+<path fill="none" stroke="black" d="M312.93,-171.14C312.93,-171.14 243.19,-171.14 243.19,-171.14 237.19,-171.14 231.19,-165.14 231.19,-159.14 231.19,-159.14 231.19,-147.14 231.19,-147.14 231.19,-141.14 237.19,-135.14 243.19,-135.14 243.19,-135.14 312.93,-135.14 312.93,-135.14 318.93,-135.14 324.93,-141.14 324.93,-147.14 324.93,-147.14 324.93,-159.14 324.93,-159.14 324.93,-165.14 318.93,-171.14 312.93,-171.14"></path>
+<text text-anchor="middle" x="278.06" y="-148.94" font-family="Times,serif" font-size="14.00">Integral Form</text>
+</g>
+<!-- InOut&#45;&gt;Integral -->
+<g id="edge2" class="edge">
+<title>InOut-&gt;Integral</title>
+<path fill="none" stroke="black" d="M203.55,-66.62C218.04,-83.45 239.7,-108.6 255.94,-127.45"></path>
+<polygon fill="black" stroke="black" points="253.35,-129.81 262.53,-135.1 258.65,-125.24 253.35,-129.81"></polygon>
+</g>
+<!-- Gauss -->
+<g id="node4" class="node">
+<title>Gauss</title>
+<path fill="none" stroke="black" d="M407.59,-44.17C407.59,-44.17 313.11,-44.17 313.11,-44.17 307.11,-44.17 301.11,-38.17 301.11,-32.17 301.11,-32.17 301.11,-20.17 301.11,-20.17 301.11,-14.17 307.11,-8.17 313.11,-8.17 313.11,-8.17 407.59,-8.17 407.59,-8.17 413.59,-8.17 419.59,-14.17 419.59,-20.17 419.59,-20.17 419.59,-32.17 419.59,-32.17 419.59,-38.17 413.59,-44.17 407.59,-44.17"></path>
+<text text-anchor="middle" x="360.35" y="-21.97" font-family="Times,serif" font-size="14.00">Gauss Divergence</text>
+</g>
+<!-- Integral&#45;&gt;Gauss -->
+<g id="edge3" class="edge">
+<title>Integral-&gt;Gauss</title>
+<path fill="none" stroke="black" d="M289.85,-134.95C303.79,-113.45 327.09,-77.5 343.06,-52.85"></path>
+<polygon fill="black" stroke="black" points="346.08,-54.62 348.58,-44.33 340.21,-50.81 346.08,-54.62"></polygon>
+</g>
+<!-- Differential -->
+<g id="node5" class="node">
+<title>Differential</title>
+<path fill="none" stroke="black" d="M501.44,-166.78C501.44,-166.78 410.17,-166.78 410.17,-166.78 404.17,-166.78 398.17,-160.78 398.17,-154.78 398.17,-154.78 398.17,-142.78 398.17,-142.78 398.17,-136.78 404.17,-130.78 410.17,-130.78 410.17,-130.78 501.44,-130.78 501.44,-130.78 507.44,-130.78 513.44,-136.78 513.44,-142.78 513.44,-142.78 513.44,-154.78 513.44,-154.78 513.44,-160.78 507.44,-166.78 501.44,-166.78"></path>
+<text text-anchor="middle" x="455.81" y="-144.58" font-family="Times,serif" font-size="14.00">Differential Form</text>
+</g>
+<!-- Gauss&#45;&gt;Differential -->
+<g id="edge4" class="edge">
+<title>Gauss-&gt;Differential</title>
+<path fill="none" stroke="black" d="M374.44,-44.26C390.51,-64.9 416.94,-98.85 435.3,-122.43"></path>
+<polygon fill="black" stroke="black" points="432.76,-124.87 441.67,-130.61 438.28,-120.57 432.76,-124.87"></polygon>
+</g>
+<!-- Discretise -->
+<g id="node6" class="node">
+<title>Discretise</title>
+<path fill="none" stroke="black" d="M567.28,-36C567.28,-36 519.32,-36 519.32,-36 513.32,-36 507.32,-30 507.32,-24 507.32,-24 507.32,-12 507.32,-12 507.32,-6 513.32,0 519.32,0 519.32,0 567.28,0 567.28,0 573.28,0 579.28,-6 579.28,-12 579.28,-12 579.28,-24 579.28,-24 579.28,-30 573.28,-36 567.28,-36"></path>
+<text text-anchor="middle" x="543.3" y="-13.8" font-family="Times,serif" font-size="14.00">Discretise</text>
+</g>
+<!-- Differential&#45;&gt;Discretise -->
+<g id="edge5" class="edge">
+<title>Differential-&gt;Discretise</title>
+<path fill="none" stroke="black" d="M467.97,-130.59C482.93,-108.24 508.42,-70.14 525.55,-44.52"></path>
+<polygon fill="black" stroke="black" points="528.58,-46.29 531.24,-36.03 522.77,-42.39 528.58,-46.29"></polygon>
+</g>
+<!-- SPH -->
+<g id="node7" class="node">
+<title>SPH</title>
+<path fill="none" stroke="black" d="M666.52,-130.13C666.52,-130.13 613.93,-130.13 613.93,-130.13 607.93,-130.13 601.93,-124.13 601.93,-118.13 601.93,-118.13 601.93,-106.13 601.93,-106.13 601.93,-100.13 607.93,-94.13 613.93,-94.13 613.93,-94.13 666.52,-94.13 666.52,-94.13 672.52,-94.13 678.52,-100.13 678.52,-106.13 678.52,-106.13 678.52,-118.13 678.52,-118.13 678.52,-124.13 672.52,-130.13 666.52,-130.13"></path>
+<text text-anchor="middle" x="640.22" y="-107.93" font-family="Times,serif" font-size="14.00">SPH EOM</text>
+</g>
+<!-- Discretise&#45;&gt;SPH -->
+<g id="edge6" class="edge">
+<title>Discretise-&gt;SPH</title>
+<path fill="none" stroke="black" d="M561.98,-36.15C576.87,-50.6 597.87,-71 614.37,-87.02"></path>
+<polygon fill="black" stroke="black" points="611.98,-89.58 621.59,-94.03 616.86,-84.56 611.98,-89.58"></polygon>
+</g>
+</g>
+</svg>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+</section>
+<section id="key-takeaways" class="slide level2">
+<h2>Key Takeaways</h2>
+<ul>
+<li>Start with particle lagrangian and you arrive still arrive at same SPH EOM!</li>
+<li>No ad-hoc reasonings about why choose a particular discretization over the other.</li>
+</ul>
+</section></section>
+<section>
+<section id="godunov-sph" class="title-slide slide level1 center">
+<h1>Godunov SPH</h1>
+
+</section>
+<section id="general-riemann-problemtoro" class="slide level2 scrollable">
+<h2>General Riemann Problem<sup>1</sup></h2>
+<p>A conservation law with discontinuous initial data.</p>
+<ul>
+<li><p>PDE: <span class="math inline">\(\mathbf{U}_t + \mathbf{A} \mathbf{U}_x = 0\)</span></p></li>
+<li><p>IC: <span class="math inline">\(\mathbf{U}(x, 0) = \begin{cases} \mathbf{U}_L &amp; x &lt; 0 \\ \mathbf{U}_R &amp; x &gt; 0 \end{cases}\)</span></p></li>
+<li><p>Hyperbolic <span class="math inline">\(\implies\)</span> Diagonalizable <span class="math inline">\(\implies\)</span> <span class="math inline">\(\mathbf{A} = \mathbf{K} \Lambda \mathbf{K}^{-1}\)</span></p></li>
+<li><p><span class="math inline">\(\mathbf{W} = \mathbf{K}^{-1} \mathbf{U}\)</span> or <span class="math inline">\(\mathbf{U} = \mathbf{K} \mathbf{W}\)</span></p></li>
+<li><p><span class="math inline">\(\mathbf{U}_t + \mathbf{A} \mathbf{U}_x = 0\)</span> becomes <span class="math inline">\(\mathbf{W}_t + \Lambda \mathbf{W}_x = 0\)</span></p></li>
+</ul>
+<aside><ol class="aside-footnotes"><li id="fn1"><p>Toro, E. F. 2009. Riemann Solvers and Numerical Methods for Fluid Dynamics: A Practical Introduction. 3rd ed.&nbsp;Springer.</p></li></ol></aside></section>
+<section id="general-riemann-problem-contdtoro" class="slide level2 scrollable">
+<h2>General Riemann Problem Contd<sup>1</sup></h2>
+<ul>
+<li><span class="math inline">\(\mathbf{W} = (w_1, w_2, \ldots, w_m)^T\)</span> decoupled.
+<ul>
+<li><span class="math inline">\(w_i\)</span> travels at speed <span class="math inline">\(\lambda_i\)</span> and <span class="math inline">\(w_i(x, t) = w_i^0(x - \lambda_i t)\)</span></li>
+</ul></li>
+</ul>
+<div id="fbf7b39a" class="cell" data-execution_count="3">
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="full_files/figure-revealjs/cell-4-output-1.png" class="quarto-figure quarto-figure-center" width="758" height="450"></p>
+</figure>
+</div>
+</div>
+</div>
+<aside><ol class="aside-footnotes"><li id="fn2"><p>Toro, E. F. 2009. Riemann Solvers and Numerical Methods for Fluid Dynamics: A Practical Introduction. 3rd ed.&nbsp;Springer.</p></li></ol></aside></section>
+<section id="general-riemann-problem-contdtoro-1" class="slide level2 scrollable">
+<h2>General Riemann Problem Contd<sup>1</sup></h2>
+<ul>
+<li><span class="math inline">\(\mathbf{U} = \mathbf{K} \mathbf{W}\)</span> can also be written as <span class="math display">\[
+\mathbf{U} = \sum_{i=1}^{m} w_i(x,t) \mathbf{K}^{(i)} = \sum_{i=1}^{m} w_i^0(x - \lambda_i t)  \mathbf{K}^{(i)}
+\]</span> where <span class="math inline">\(\mathbf{K}^{(i)}\)</span> is the <span class="math inline">\(i\)</span>-th column of <span class="math inline">\(\mathbf{K}\)</span>.</li>
+<li>The right and left states can also be expressed as <span class="math display">\[
+\mathbf{U}_{\text{L}} = \sum_{i=1}^{m} \alpha_i \mathbf{K}^{(i)} ,
+\quad
+\mathbf{U}_{\text{R}} = \sum_{i=1}^{m} \beta_i \mathbf{K}^{(i)}
+\]</span> Comparing the two expressions above, <span class="math display">\[
+w_i^0(x) = \begin{cases}
+\alpha_i &amp; x &lt; 0 \\
+\beta_i &amp; x &gt; 0
+\end{cases} \\
+\implies w_i(x) = w_i^0(x - \lambda_i t) = \begin{cases}
+\alpha_i &amp; x &lt; \lambda_i t \\
+\beta_i &amp; x &gt; \lambda_i t
+\end{cases}
+\]</span> Putting it all together, <span class="math display">\[
+\boxed{\mathbf{U}(x, t) = \sum_{i=I+1}^{m} \alpha_i \mathbf{K}^{(i)} + \sum_{i=1}^{I} \beta_i \mathbf{K}^{(i)}}
+\]</span> where the integer <span class="math inline">\(I\)</span> is the maximum value of <span class="math inline">\(i\)</span> such that <span class="math inline">\(\lambda_i &lt; x/t\)</span>.</li>
+</ul>
+<aside><ol class="aside-footnotes"><li id="fn3"><p>Toro, E. F. 2009. Riemann Solvers and Numerical Methods for Fluid Dynamics: A Practical Introduction. 3rd ed.&nbsp;Springer.</p></li></ol></aside></section>
+<section id="riemann-problem-for-euler-equations" class="slide level2">
+<h2>Riemann Problem for Euler Equations</h2>
+<p>Three waves separating four states.</p>
+<div id="3cb69543" class="cell" data-execution_count="4">
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="full_files/figure-revealjs/cell-5-output-1.png" class="quarto-figure quarto-figure-center" width="605" height="374"></p>
+</figure>
+</div>
+</div>
+</div>
+<p><span class="math display">\[
+\lambda_1 = u - c , \quad \lambda_2 = u , \quad \lambda_3 = u + c
+\]</span> <!-- - **Left Wave**: Rarefaction or shock depending on pressure ratio
+- **Middle Wave**: Contact discontinuity (carries density and entropy jumps)
+- **Right Wave**: Rarefaction or shock depending on pressure ratio
+- **Four States**: $(\rho_L, u_L, p_L)$, $(\rho_*, u_*, p_L^*)$, $(\rho_*, u_*, p_R^*)$, $(\rho_R, u_R, p_R)$
+
+- The velocity and pressure are continuous across the contact discontinuity: $u_* = u_1^* = u_2^*$ and $p_* = p_1^* = p_2^*$.
+- Entropy is constant across rarefaction but discontinuous across shocks. --></p>
+</section>
+<section id="godunovs-scheme-in-finite-volume" class="slide level2">
+<h2>Godunov’s Scheme in Finite Volume</h2>
+<ul>
+<li>Properties piecewise continuous over each cell.</li>
+<li>Discontinuities at interfaces.</li>
+<li>Riemann problems solved at each cell interface to get intercell fluxes.</li>
+</ul>
+<div id="a788c38d" class="cell" data-execution_count="5">
+<div class="cell-output cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="full_files/figure-revealjs/cell-6-output-1.png" class="quarto-figure quarto-figure-center" width="758" height="374"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="godunov-sph-cha2003" class="slide level2 scrollable">
+<h2>Godunov SPH <sup>1</sup></h2>
+<ul>
+<li><p>Interface midway between particles <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span>.</p></li>
+<li><p>Solve Riemann problem to find <span class="math inline">\(p^*\)</span> and <span class="math inline">\(u^*\)</span> at the interface.</p></li>
+<li><p>Substitute in SPH discretized equations:</p></li>
+<li><p>No artificial viscosity needed!</p></li>
+<li><p><strong>Original GSPH by Inutsuka(2002)<sup>2</sup> is slightly different.</strong></p></li>
+</ul>
+<aside><ol class="aside-footnotes"><li id="fn4"><p>Cha, S.- H., and A. P. Whitworth. 2003. “Implementations and Tests of Godunov-Type Particle Hydrodynamics.” Monthly Notices of the Royal Astronomical Society 340 (1): 73–90. https://doi.org/10.1046/j.1365-8711.2003.06266.x.</p></li><li id="fn5"><p>Inutsuka, Shu-ichiro. 2002. “Reformulation of Smoothed Particle Hydrodynamics with Riemann Solver.” Journal of Computational Physics 179 (1): 238–67. https://doi.org/10.1006/jcph.2002.7053.</p></li></ol></aside></section>
+<section id="godunov-sph-equationscha2003" class="slide level2 scrollable">
+<h2>Godunov SPH Equations<sup>1</sup></h2>
+<p><span class="math display">\[\rho = \sum_{j} m_j W_{ij}\]</span> <span class="math display">\[\frac{d \mathbf{v}_i}{d t} = - \sum_{j} m_j \left( \frac{p^*}{\rho_i^2} + \frac{p^*}{\rho_j^2} \right) \nabla_i W_{ij}\]</span> <span class="math display">\[\frac{d e_i}{d t} = \sum_{j} m_j \frac{p^*}{\rho_i^2} (\mathbf{v}^* - \mathbf{v}_i) \cdot \nabla_i W_{ij}\]</span></p>
+<aside><ol class="aside-footnotes"><li id="fn6"><p>Cha, S.- H., and A. P. Whitworth. 2003. “Implementations and Tests of Godunov-Type Particle Hydrodynamics.” Monthly Notices of the Royal Astronomical Society 340 (1): 73–90. https://doi.org/10.1046/j.1365-8711.2003.06266.x.</p></li></ol></aside></section>
+<section id="key-takeaways-1" class="slide level2">
+<h2>Key Takeaways</h2>
+<ul>
+<li>Interaction between particles modeled using Riemann problems.</li>
+<li>Obtain <span class="math inline">\(p^*\)</span> and <span class="math inline">\(u^*\)</span> from Riemann solver.</li>
+<li>Substitute in SPH EOM.</li>
+<li>No artificial viscosity needed to capture shocks.</li>
+</ul>
+</section></section>
+<section>
+<section id="magma2-scheme" class="title-slide slide level1 center">
+<h1>MAGMA2 Scheme</h1>
+
+</section>
+<section id="derivatives-without-nabla-w_ijgarcia2012-rosswog2015" class="slide level2 scrollable">
+<h2>Derivatives without <span class="math inline">\(\nabla W_{ij}\)</span><sup>1</sup> <sup>2</sup></h2>
+<p><span class="math display">\[
+\tilde{\mathbf{I}}_f(\mathbf{r}) = \int \left[ f(\mathbf{r'}) - f(\mathbf{r})\right](\mathbf{r}' - \mathbf{r}) W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
+\]</span> Substitute <span class="math inline">\(f(\mathbf{r'}) = f(\mathbf{r}) + \nabla f(\mathbf{r}) \cdot (\mathbf{r'} - \mathbf{r}) + \dots\)</span> in above <span class="math display">\[
+\tilde{\mathbf{I}}^i_f(\mathbf{r}) = \int \left[ (\nabla f)^k|_r (\mathbf{r'} - \mathbf{r})^k \right] (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V' + O(f'')
+\]</span> Rearrange, <span class="math display">\[
+(\nabla f)^k(\mathbf{r}) = \tilde{\mathbf{C}}^{k i} \tilde{\mathbf{I}}_f^i(\mathbf{r})
+\]</span></p>
+<aside><ol class="aside-footnotes"><li id="fn7"><p>García-Senz, D., R. M. Cabezón, and J. A. Escartín. 2012. “Improving Smoothed Particle Hydrodynamics with an Integral Approach to Calculating Gradients.” Astronomy &amp; Astrophysics 538 (February): A9. https://doi.org/10.1051/0004-6361/201117939.</p></li><li id="fn8"><p>Rosswog, S. 2015. “Boosting the Accuracy of SPH Techniques: Newtonian and Special-Relativistic Tests.” Monthly Notices of the Royal Astronomical Society 448 (4): 3628–64. https://doi.org/10.1093/mnras/stv225.</p></li></ol></aside></section>
+<section id="derivatives-without-nabla-w_ijgarcia2012-rosswog2015-contd" class="slide level2 scrollable">
+<h2>Derivatives without <span class="math inline">\(\nabla W_{ij}\)</span><sup>1</sup> <sup>2</sup> Contd</h2>
+<p><span class="math display">\[
+(\nabla f)^k(\mathbf{r}) = \tilde{\mathbf{C}}^{k i} \tilde{\mathbf{I}}_f^i(\mathbf{r})
+\]</span> where <span class="math display">\[
+\frac{1}{\tilde{\mathbf{C}}^{k i}} = \int (\mathbf{r'} - \mathbf{r})^k (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
+\]</span> or in a discrete form, <span class="math display">\[
+\frac{1}{\mathbf{C}^{k i}} = \sum_j \frac{m_j}{\rho_j} (\mathbf{r}_j - \mathbf{r})^k (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
+\]</span></p>
+<aside><ol class="aside-footnotes"><li id="fn9"><p>García-Senz, D., R. M. Cabezón, and J. A. Escartín. 2012. “Improving Smoothed Particle Hydrodynamics with an Integral Approach to Calculating Gradients.” Astronomy &amp; Astrophysics 538 (February): A9. https://doi.org/10.1051/0004-6361/201117939.</p></li><li id="fn10"><p>Rosswog, S. 2015. “Boosting the Accuracy of SPH Techniques: Newtonian and Special-Relativistic Tests.” Monthly Notices of the Royal Astronomical Society 448 (4): 3628–64. https://doi.org/10.1093/mnras/stv225.</p></li></ol></aside></section>
+<section id="derivatives-without-nabla-w_ijgarcia2012-rosswog2015-contd-1" class="slide level2 scrollable">
+<h2>Derivatives without <span class="math inline">\(\nabla W_{ij}\)</span><sup>1</sup> <sup>2</sup> Contd</h2>
+<p><span class="math display">\[
+(\nabla f)^k(\mathbf{r}) = \sum_j V_j f_j \sum_{d=1}^D \mathbf{C}^{k d} (\mathbf{r}_b - \mathbf{r})^d W(\left|\mathbf{r} - \mathbf{r}_b\right|, h)
+\]</span></p>
+<p>We have seen, <span class="math display">\[
+(\nabla f)^k (\mathbf{r}) = \sum_j V_j f_j \left(\nabla W \left(\left|\mathbf{r} - \mathbf{r}_j\right|, h\right) \right)^k
+\]</span> By comparisson, <span class="math display">\[
+\left(\nabla W \left(\left|\mathbf{r} - \mathbf{r}_j\right|, h\right) \right)^k \leftrightarrow \mathbf{C}^{k i} (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
+\]</span></p>
+<aside><ol class="aside-footnotes"><li id="fn11"><p>García-Senz, D., R. M. Cabezón, and J. A. Escartín. 2012. “Improving Smoothed Particle Hydrodynamics with an Integral Approach to Calculating Gradients.” Astronomy &amp; Astrophysics 538 (February): A9. https://doi.org/10.1051/0004-6361/201117939.</p></li><li id="fn12"><p>Rosswog, S. 2015. “Boosting the Accuracy of SPH Techniques: Newtonian and Special-Relativistic Tests.” Monthly Notices of the Royal Astronomical Society 448 (4): 3628–64. https://doi.org/10.1093/mnras/stv225.</p></li></ol></aside></section>
+<section id="magma2rosswog2020a-equations-mi1" class="slide level2 scrollable">
+<h2>MAGMA2<sup>1</sup> Equations: MI1</h2>
+<p><span class="math display">\[
+\rho_i = \sum_j m_j W_{ij}(h_i)
+\]</span> <span class="math display">\[
+\frac{d \mathbf{v}_i}{d t} = - \sum_j m_j \left( \frac{p_i}{\rho_i^2} \mathbf{G}_i + \frac{p_j}{\rho_j^2} \mathbf{G}_j\right)
+\]</span> <span class="math display">\[
+\frac{d e_i}{d t} = \frac{p_i}{\rho_i^2} \sum_j m_j (\mathbf{v}_i - \mathbf{v}_j) \cdot \mathbf{G}_i
+\]</span> where <span class="math display">\[
+\mathbf{G}_i^k = \sum_{d=1}^3 \mathbf{C}_i^{k d}(\mathbf{r}_i, h_i) (\mathbf{r}_j - \mathbf{r}_i)^d W_{ij}(h_i)
+\]</span> and <span class="math display">\[
+\mathbf{G}_j^k = \sum_{d=1}^3 \mathbf{C}_j^{k d}(\mathbf{r}_j, h_j) (\mathbf{r}_j - \mathbf{r}_i)^d W_{ij}(h_j)
+\]</span></p>
+<aside><ol class="aside-footnotes"><li id="fn13"><p>Rosswog, S. 2020. “The Lagrangian Hydrodynamics Code MAGMA2.” Monthly Notices of the Royal Astronomical Society 498 (3): 4230–55. https://doi.org/10.1093/mnras/staa2591.</p></li></ol></aside></section>
+<section id="remember-artificial-viscosity" class="slide level2 scrollable">
+<h2>Remember Artificial Viscosity?</h2>
+<p><span class="math display">\[
+\Pi_{ij} = \begin{cases}
+\dfrac{-\alpha c_{s,ij} \mu_{ij} + \beta \mu_{ij}^2}{\rho_{ij}} &amp; \mathbf{v}_{ij} \cdot \mathbf{r}_{ij} &lt; 0, \\
+0 &amp; \text{otherwise}.
+\end{cases}
+\]</span> where <span class="math display">\[
+\mu_{ij} = \frac{h_{ij} \mathbf{v}_{ij} \cdot \mathbf{r}_{ij}}{\left|\mathbf{r}_{ij}\right|^2 + \epsilon h_{ij}^2}
+\]</span></p>
+<div class="callout callout-note callout-titled callout-style-default">
+<div class="callout-body">
+<div class="callout-title">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<p><strong>Quote</strong></p>
+</div>
+<div class="callout-content">
+<p>Standard SPH is hopeless: it oversmoothes the strong shock and is completely incapable of dealing with the weak shock. – Cullen and Dehnen<sup>1</sup></p>
+</div>
+</div>
+</div>
+<aside><ol class="aside-footnotes"><li id="fn14"><p>Cullen, Lee, and Walter Dehnen. 2010. “Inviscid Smoothed Particle Hydrodynamics: Inviscid Smoothed Particle Hydrodynamics.” Monthly Notices of the Royal Astronomical Society 408 (2): 669–83. https://doi.org/10.1111/j.1365-2966.2010.17158.x.</p></li></ol></aside></section>
+<section id="balsara-switch" class="slide level2 scrollable">
+<h2>Balsara Switch <sup>1</sup></h2>
+<p>To reduce unwanted shear viscosity, we can multiply <span class="math inline">\(\Pi_{ij}\)</span> by a factor <span class="math inline">\(f_{ij} = f_i + f_j\)</span> where <span class="math display">\[
+f_i = \frac{\left|\nabla \cdot \mathbf{v}_i\right|}{\left|\nabla \cdot \mathbf{v}_i\right| + \left|\nabla \times \mathbf{v}_i\right| }
+\]</span></p>
+<p>Remember? <span class="math display">\[
+\nabla \cdot \mathbf{v} = -\frac{1}{\rho} \frac{\mathrm{d}\rho}{\mathrm{d}t}
+\]</span></p>
+<aside><ol class="aside-footnotes"><li id="fn15"><p>Balsara, Dinshaw S. 1995. “Von Neumann Stability Analysis of Smoothed Particle Hydrodynamics—Suggestions for Optimal Algorithms.” Journal of Computational Physics 121 (2): 357–72. https://doi.org/10.1016/S0021-9991(95)90221-X.</p></li></ol></aside></section>
+<section id="morris-monaghan-switch" class="slide level2 scrollable">
+<h2>Morris &amp; Monaghan Switch <sup>1</sup></h2>
+<p><span class="math display">\[
+\frac{\mathrm{d} \alpha_i}{\mathrm{d} t} = - \frac{\alpha_i - \alpha_{min}}{\tau_i} + S_i
+\]</span> where <span class="math inline">\(\tau_i = 0.2 h_i / (0.1 c_{s,i})\)</span> and <span class="math display">\[
+S_i = \max(-\nabla \cdot \mathbf{v}_i, 0)
+\]</span></p>
+<aside><ol class="aside-footnotes"><li id="fn16"><p>Morris, J. P., and J. J. Monaghan. 1997. “A Switch to Reduce SPH Viscosity.” Journal of Computational Physics 136 (1): 41–50. https://doi.org/10.1006/jcph.1997.5690.</p></li></ol></aside></section>
+<section id="cullen-and-dehnen-switch-cullen2010" class="slide level2 scrollable">
+<h2>Cullen and Dehnen Switch <sup>1</sup></h2>
+<p>Use <span class="math inline">\(\mathrm{d} (\mathbf{\nabla \cdot v}) / \mathrm{d} t\)</span> instead of <span class="math inline">\(\nabla \cdot \mathbf{v}\)</span>. <img data-src="assets/sod_cullen.png" style="width:100.0%" alt="Cullen and Dehnen Switch"> New method = Cullen and Dehnen Switch</p>
+<aside><ol class="aside-footnotes"><li id="fn17"><p>Cullen, Lee, and Walter Dehnen. 2010. “Inviscid Smoothed Particle Hydrodynamics: Inviscid Smoothed Particle Hydrodynamics.” Monthly Notices of the Royal Astronomical Society 408 (2): 669–83. https://doi.org/10.1111/j.1365-2966.2010.17158.x.</p></li></ol></aside></section>
+<section id="others" class="slide level2 scrollable">
+<h2>Others</h2>
+<ul>
+<li>Read and Hayfield (2012) <sup>1</sup></li>
+<li>Frontiere et al.&nbsp;(2017) <sup>2</sup></li>
+<li>Rosswog et al.&nbsp;(2020) <sup>3</sup></li>
+</ul>
+<aside><ol class="aside-footnotes"><li id="fn18"><p>Read, J. I., and T. Hayfield. 2012. “SPHS: Smoothed Particle Hydrodynamics with a Higher Order Dissipation Switch: SPH with a Higher Order Dissipation Switch.” Monthly Notices of the Royal Astronomical Society 422 (4): 3037–55. https://doi.org/10.1111/j.1365-2966.2012.20819.x.</p></li><li id="fn19"><p>Frontiere, Nicholas, Cody D. Raskin, and J. Michael Owen. 2017. “CRKSPH - A Conservative Reproducing Kernel Smoothed Particle Hydrodynamics Scheme.” Journal of Computational Physics 332 (March): 160–209. https://doi.org/10.1016/j.jcp.2016.12.004.</p></li><li id="fn20"><p>Rosswog, S. 2020. “A Simple, Entropy-Based Dissipation Trigger for SPH.” The Astrophysical Journal 898 (1): 60. https://doi.org/10.3847/1538-4357/ab9a2e.</p></li></ol></aside></section>
+<section id="key-takeaways-2" class="slide level2">
+<h2>Key Takeaways</h2>
+<ul>
+<li>Shock limiters
+<ul>
+<li>Limits artificial viscosity to regions near shocks.</li>
+<li>Less smearing, crisper results.</li>
+</ul></li>
+<li>MAGMA2
+<ul>
+<li>New ways to compute derivatives without <span class="math inline">\(\nabla W_{ij}\)</span>.</li>
+<li>Matrix <span class="math inline">\(\mathbf{C}\)</span> adds advantages of kernel corrections.</li>
+<li>Efficient</li>
+<li>Limited artificial viscosity.</li>
+<li>Good results.</li>
+</ul></li>
+</ul>
+</section></section>
+<section>
+<section id="boundary-treatment" class="title-slide slide level1 center">
+<h1>Boundary Treatment</h1>
+
+</section>
+<section id="particle-configurations" class="slide level2">
+<h2>Particle Configurations</h2>
+
+<img data-src="assets/bound.svg" class="quarto-figure quarto-figure-center r-stretch" style="width:100.0%"></section>
+<section id="assign-propertiesadami" class="slide level2 scrollable">
+<h2>Assign Properties<sup>1</sup></h2>
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="assets/adami.svg" class="quarto-figure quarto-figure-center" style="width:80.0%"></p>
+</figure>
+</div>
+<aside><ol class="aside-footnotes"><li id="fn21"><p>Adami, S., X.Y. Hu, and N.A. Adams. 2012. “A Generalized Wall Boundary Condition for Smoothed Particle Hydrodynamics.” Journal of Computational Physics 231 (21): 7057–75. https://doi.org/10.1016/j.jcp.2012.05.005.</p></li></ol></aside></section>
+<section id="keep-volume-constant" class="slide level2">
+<h2>Keep Volume Constant</h2>
+<div class="quarto-layout-panel" data-layout-ncol="3">
+<div class="quarto-layout-row">
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="assets/initial.svg"></p>
+<figcaption>Initial Configuration</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="assets/inter.svg"></p>
+<figcaption>Result of density interpolation after fluid density change</figcaption>
+</figure>
+</div>
+</div>
+<div class="quarto-layout-cell" style="flex-basis: 33.3%;justify-content: flex-start;">
+<div class="quarto-figure quarto-figure-center">
+<figure>
+<p><img data-src="assets/final.svg"></p>
+<figcaption>Alter ghost particles’ mass to preserve their volume</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="summary" class="slide level2">
+<h2>Summary</h2>
+<ul>
+<li>Extrapolate</li>
+<li>Flip interface normal component of velocity</li>
+<li>Ensure volume constancy for ghost particles</li>
+</ul>
+
+</section></section>
+
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="full_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="full_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="full_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="full_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="full_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="full_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="full_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="full_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="full_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="full_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': false,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: true,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'bottom-right',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.1,
+
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+          const outerScaffold = trigger.parentElement.cloneNode(true);
+          const codeEl = outerScaffold.querySelector('code');
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
+            }
+          }
+          return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>
