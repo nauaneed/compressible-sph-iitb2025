@@ -621,11 +621,11 @@ $$
 $$
 where
 $$
-\frac{1}{\tilde{\mathbf{C}}^{k i}} = \int (\mathbf{r'} - \mathbf{r})^k (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
+\left(\tilde{\mathbf{C}}^{k i}\right)^{-1} = \int (\mathbf{r'} - \mathbf{r})^k (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
 $$
 or in a discrete form,
 $$
-\frac{1}{\mathbf{C}^{k i}} = \sum_j \frac{m_j}{\rho_j} (\mathbf{r}_j - \mathbf{r})^k (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
+\left(\mathbf{C}^{k i}\right)^{-1} = \sum_j \frac{m_j}{\rho_j} (\mathbf{r}_j - \mathbf{r})^k (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
 $$
 
 ## Derivatives without $\nabla W_{ij}$[^garcia2012] [^rosswog2015] Contd
