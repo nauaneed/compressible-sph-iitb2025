@@ -198,7 +198,7 @@ where $T$ is the KE and $U$ is the PE of the system.
 </section>
 <section id="principle-of-stationary-action" class="slide level2">
 <h2>Principle of Stationary Action</h2>
-<div id="b1b992a5" class="cell" data-execution_count="1">
+<div id="142f9d14" class="cell" data-execution_count="1">
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure>
@@ -252,7 +252,7 @@ L = \frac{1}{2} m v^2 - mgh = \frac{1}{2} m l^2 \dot{\theta}^2 + m g l \cos\thet
 \boxed{\ddot{\theta} + \frac{g}{l} \sin\theta = 0}
 \]</span></p>
 </div>
-<div id="2289d0ab" class="cell quarto-layout-cell" data-execution_count="2" style="flex-basis: 50.0%;justify-content: flex-start;">
+<div id="f02f5780" class="cell quarto-layout-cell" data-execution_count="2" style="flex-basis: 50.0%;justify-content: flex-start;">
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure>
@@ -443,7 +443,7 @@ L = \sum_{j} \frac{1}{2} m_j \mathbf{v}_j^2 - e_j
 <li><span class="math inline">\(w_i\)</span> travels at speed <span class="math inline">\(\lambda_i\)</span> and <span class="math inline">\(w_i(x, t) = w_i^0(x - \lambda_i t)\)</span></li>
 </ul></li>
 </ul>
-<div id="fbf7b39a" class="cell" data-execution_count="3">
+<div id="a2b3e5cc" class="cell" data-execution_count="3">
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure>
@@ -480,7 +480,7 @@ w_i^0(x) = \begin{cases}
 <section id="riemann-problem-for-euler-equations" class="slide level2">
 <h2>Riemann Problem for Euler Equations</h2>
 <p>Three waves separating four states.</p>
-<div id="3cb69543" class="cell" data-execution_count="4">
+<div id="426a384f" class="cell" data-execution_count="4">
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure>
@@ -506,7 +506,7 @@ w_i^0(x) = \begin{cases}
 <li>Discontinuities at interfaces.</li>
 <li>Riemann problems solved at each cell interface to get intercell fluxes.</li>
 </ul>
-<div id="a788c38d" class="cell" data-execution_count="5">
+<div id="9b2ea9e8" class="cell" data-execution_count="5">
 <div class="cell-output cell-output-display">
 <div class="quarto-figure quarto-figure-center">
 <figure>
@@ -559,9 +559,9 @@ w_i^0(x) = \begin{cases}
 <p><span class="math display">\[
 (\nabla f)^k(\mathbf{r}) = \tilde{\mathbf{C}}^{k i} \tilde{\mathbf{I}}_f^i(\mathbf{r})
 \]</span> where <span class="math display">\[
-\frac{1}{\tilde{\mathbf{C}}^{k i}} = \int (\mathbf{r'} - \mathbf{r})^k (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
+\left(\tilde{\mathbf{C}}^{k i}\right)^{-1} = \int (\mathbf{r'} - \mathbf{r})^k (\mathbf{r'} - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}'\right|, h) \mathrm{d} V'
 \]</span> or in a discrete form, <span class="math display">\[
-\frac{1}{\mathbf{C}^{k i}} = \sum_j \frac{m_j}{\rho_j} (\mathbf{r}_j - \mathbf{r})^k (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
+\left(\mathbf{C}^{k i}\right)^{-1} = \sum_j \frac{m_j}{\rho_j} (\mathbf{r}_j - \mathbf{r})^k (\mathbf{r}_j - \mathbf{r})^i W(\left|\mathbf{r} - \mathbf{r}_j\right|, h)
 \]</span></p>
 <aside><ol class="aside-footnotes"><li id="fn9"><p>García-Senz, D., R. M. Cabezón, and J. A. Escartín. 2012. “Improving Smoothed Particle Hydrodynamics with an Integral Approach to Calculating Gradients.” Astronomy &amp; Astrophysics 538 (February): A9. https://doi.org/10.1051/0004-6361/201117939.</p></li><li id="fn10"><p>Rosswog, S. 2015. “Boosting the Accuracy of SPH Techniques: Newtonian and Special-Relativistic Tests.” Monthly Notices of the Royal Astronomical Society 448 (4): 3628–64. https://doi.org/10.1093/mnras/stv225.</p></li></ol></aside></section>
 <section id="derivatives-without-nabla-w_ijgarcia2012-rosswog2015-contd-1" class="slide level2 scrollable">
